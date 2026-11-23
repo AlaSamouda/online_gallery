@@ -211,6 +211,30 @@ npm run seed -- --reset
 | API | <http://localhost:3001/api> |
 | Visualisation de la base (Adminer) | <http://localhost:8080> |
 
+### Pile Docker (VM Ubuntu, sans Node sur l'hôte)
+
+Prérequis : Docker Engine + le plugin Compose v2 (`docker compose version`).
+
+```bash
+cd art-gallery-aws
+docker compose --profile stack up --build
+```
+
+| Service | Adresse (sur la VM) |
+|---|---|
+| Site (nginx + reverse proxy `/api`) | <http://localhost:3000> |
+| API directe | <http://localhost:3001/api/health> |
+| Adminer | <http://localhost:8081> |
+
+Depuis Windows vers la VM : `http://<IP-de-la-VM>:3000`. Ouvrez les ports 3000 (et 8081 si besoin) :
+
+```bash
+sudo ufw allow 3000/tcp
+sudo ufw allow 8081/tcp
+```
+
+Arrêt : `docker compose --profile stack down`. Les images se reconstruisent avec `--build`. Ne lancez pas `npm start` en même temps (ports 3000 / 3001).
+
 Ouvrez le site via `localhost` : une autre adresse est refusée par la politique CORS du backend.
 
 **Comptes de démonstration** (créés par le seed, mot de passe `Password123!`) : `artiste01@gallery.test`, `acheteur01@gallery.test`. L'administrateur est `admin@gallery.test` avec le mot de passe `ADMIN_PASSWORD` de votre `backend/.env` (`Admin1234!` par défaut).

@@ -43,7 +43,8 @@ export class UploadsController {
     }
 
     writeFileSync(join(UPLOAD_DIR, name), file.buffer);
-    const base = this.config.get<string>('PUBLIC_API_URL') ?? `http://localhost:${this.config.get('PORT') ?? 3001}`;
+    const base = (this.config.get<string>('PUBLIC_API_URL') ?? '').replace(/\/$/, '');
+    // Relatif si PUBLIC_API_URL est vide : marche derrière nginx (VM, IP, localhost).
     return { url: `${base}/uploads/${name}` };
   }
 }

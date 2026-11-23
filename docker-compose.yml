@@ -1,4 +1,12 @@
 # PostgreSQL local pour le développement (la prod utilise Amazon RDS)
+#
+# Dev npm (inchangé) :
+#   docker compose up -d          → db (+ Adminer via override)
+#
+# Pile conteneurisée (API + nginx + db) :
+#   docker compose --profile stack up --build
+#   site : http://localhost:3000
+#   API  : http://localhost:3001/api  (et via nginx : http://localhost:3000/api)
 services:
   db:
     image: postgres:16-alpine
@@ -18,5 +26,54 @@ services:
       timeout: 3s
       retries: 10
 
+  api:
+    profiles: ["stack"]
+    build:
+      context: ./backend
+    container_name: art-gallery-api
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "3001:3001"
+    environment:
+      # development : TypeORM synchronize (schéma créé au démarrage). En ECS : production.
+      NODE_ENV: development
+      PORT: "3001"
+      FRONTEND_URL: http://localhost:3000
+      # Vide : liens d'upload relatifs (/uploads/...), valables depuis localhost ou l'IP de la VM
+      PUBLIC_API_URL: ""
+      DB_HOST: db
+      DB_PORT: "5432"
+      DB_USER: ${DB_USER:-gallery}
+      DB_PASSWORD: ${DB_PASSWORD:-gallery}
+      DB_NAME: ${DB_NAME:-art_gallery}
+      DB_SSL: "false"
+      JWT_SECRET: ${JWT_SECRET:-change-me-local-docker}
+      JWT_EXPIRES_IN: 1d
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@gallery.test}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-Admin1234!}
+      CURRENCY: TND
+      PAYMENT_PROVIDER: mock
+    volumes:
+      - api_uploads:/app/uploads
+
+  web:
+    profiles: ["stack"]
+    build:
+      context: ./frontend
+      args:
+        NEXT_PUBLIC_API_URL: /api
+        NEXT_PUBLIC_CURRENCY: TND
+    container_name: art-gallery-web
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_healthy
+    ports:
+      - "3000:80"
+
 volumes:
   pgdata:
+  api_uploads:
